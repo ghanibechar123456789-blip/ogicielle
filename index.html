@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>دفتر المحل</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#f3efe4;--card:#fffdf7;--tx:#26231c;--mut:#7a7566;--pri:#1f5c46;--prit:#fff;--bd:#ddd6c3;--warn:#b3361f;--ok:#e6efe0}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1b1a16;--card:#25241f;--tx:#f1ecdd;--mut:#a39d89;--pri:#7fcfa6;--prit:#12261c;--bd:#38362d;--warn:#ff8a73;--ok:#2a3a2c}}
+:root[data-theme="dark"]{--bg:#1b1a16;--card:#25241f;--tx:#f1ecdd;--mut:#a39d89;--pri:#7fcfa6;--prit:#12261c;--bd:#38362d;--warn:#ff8a73;--ok:#2a3a2c}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.5 Tahoma,"Segoe UI",Arial,sans-serif;max-width:640px;margin-inline:auto;padding-bottom:84px}
+header{padding:18px 16px 8px}
+h1{margin:0;font-size:22px}
+.today{color:var(--mut);font-size:14px}
+.today b{color:var(--pri);font-size:18px}
+nav{position:fixed;bottom:0;inset-inline:0;max-width:640px;margin-inline:auto;display:flex;background:var(--card);border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav button{flex:1;border:0;background:none;color:var(--mut);padding:14px 4px;font:inherit;font-size:15px}
+nav button.on{color:var(--pri);font-weight:700;box-shadow:inset 0 3px 0 var(--pri)}
+section{display:none;padding:8px 16px}
+section.on{display:block}
+input{font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:10px;width:100%}
+button.b{font:inherit;border:0;border-radius:8px;padding:11px 14px;background:var(--pri);color:var(--prit);font-weight:700}
+button.g{background:none;color:var(--pri);border:1px solid var(--pri)}
+button.r{background:none;color:var(--warn);border:1px solid var(--warn)}
+.row{display:flex;gap:8px;align-items:center;background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:10px 12px;margin:8px 0}
+.row>.n{flex:1;min-width:0}
+.row small{color:var(--mut);display:block}
+.low{color:var(--warn);font-weight:700}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.tot{display:flex;justify-content:space-between;font-size:20px;font-weight:700;padding:12px 4px;border-top:2px solid var(--tx);margin-top:10px}
+.q{display:flex;align-items:center;gap:8px}
+.q button{width:34px;height:34px;border-radius:50%;border:1px solid var(--bd);background:var(--card);color:var(--tx);font-size:18px}
+.empty{color:var(--mut);text-align:center;padding:22px 8px}
+h2{font-size:17px;margin:16px 0 4px}
+.pay{width:90px}
+input{min-width:0}
+textarea{font:12px monospace;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:10px;width:100%;margin-top:8px}
+.rc{white-space:pre-wrap;background:var(--card);border:1px dashed var(--mut);border-radius:8px;padding:12px;margin:10px 0 8px;font-size:14px}
+#toast{position:fixed;bottom:76px;inset-inline:16px;margin-inline:auto;max-width:420px;background:var(--tx);color:var(--bg);padding:10px 14px;border-radius:8px;text-align:center;opacity:0;pointer-events:none;transition:opacity .2s;z-index:20}
+#toast.on{opacity:1}
+.cw{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:15;flex-direction:column;justify-content:center;padding:16px;gap:12px}
+.cw.on{display:flex}
+.cw video{width:100%;border-radius:10px}
+</style>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1f5c46">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+</head>
+<body>
+<header>
+<h1>دفتر المحل</h1>
+<button id="inst" class="b g" hidden style="margin-bottom:8px">تثبيت التطبيق على جهازك</button>
+<div class="today">مبيعات اليوم: <b id="today">0 دج</b></div>
+</header>
+
+<section id="t-sell" class="on">
+<div style="display:flex;gap:8px"><input id="q" placeholder="ابحث بالاسم أو اكتب الباركود…" oninput="renderSell()" onkeydown="if(event.key==='Enter')byCode($('q').value)"><button class="b g" onclick="scan()">مسح</button></div>
+<div id="plist"></div>
+<h2>الفاتورة الحالية</h2>
+<div id="cart"></div>
+<div class="tot"><span>المجموع</span><span id="total">0 دج</span></div>
+<div class="grid">
+<button class="b" onclick="checkout(false)">تأكيد البيع</button>
+<button class="b g" onclick="checkout(true)">بيع بالدين</button>
+</div>
+<input id="who" placeholder="اسم الزبون (عند البيع بالدين)" style="margin-top:8px">
+<div id="msg" class="empty"></div>
+<div id="rcbox" hidden><div class="rc" id="rc"></div><button class="b g" style="width:100%" onclick="shareRc()">مشاركة الوصل</button></div>
+</section>
+
+<section id="t-prod">
+<h2>إضافة منتج</h2>
+<input id="pn" placeholder="اسم المنتج">
+<div class="grid" style="margin:8px 0">
+<input id="pp" type="number" inputmode="decimal" placeholder="السعر (دج)">
+<input id="pq" type="number" inputmode="numeric" placeholder="الكمية">
+</div>
+<div class="grid" style="margin-bottom:8px"><input id="pc" type="number" inputmode="decimal" placeholder="سعر الشراء (للأرباح)"><div style="display:flex;gap:6px"><input id="pb" placeholder="الباركود"><button class="b g" onclick="scan('pb')">مسح</button></div></div>
+<input id="pm" type="number" inputmode="numeric" placeholder="تنبيه عندما تنزل الكمية إلى (مثال: 5)" style="margin-bottom:8px">
+<button class="b" style="width:100%" onclick="addProd()">حفظ المنتج</button>
+<h2>المخزون</h2>
+<div id="stock"></div>
+</section>
+
+<section id="t-debt">
+<h2>ديون الزبائن</h2>
+<div id="debts"></div>
+</section>
+
+<section id="t-rep">
+<h2>التقارير</h2>
+<div id="reps"></div>
+<h2>نسخة احتياطية</h2>
+<small style="color:var(--mut)">اضغط «نسخ البيانات» ثم الصقها في رسالة لنفسك (واتساب أو ملاحظات). للاستعادة الصق النص هنا واضغط «استيراد».</small>
+<textarea id="bk" rows="4"></textarea>
+<div class="grid" style="margin-top:8px"><button class="b" onclick="exp()">نسخ البيانات</button><button class="b g" onclick="imp()">استيراد</button></div>
+<div id="bkm" class="empty"></div>
+</section>
+
+<div id="toast"></div>
+<div id="camw" class="cw"><video id="cam" playsinline muted></video><button class="b" onclick="stopCam()">إغلاق الكاميرا</button></div>
+
+<nav>
+<button class="on" onclick="tab('sell',this)">البيع</button>
+<button onclick="tab('prod',this)">المنتجات</button>
+<button onclick="tab('debt',this)">الديون</button>
+<button onclick="tab('rep',this)">التقارير</button>
+</nav>
+
+<script>
+let S;
+try{S=JSON.parse(localStorage.getItem('dm'))}catch(e){}
+S=S||{p:[],d:[],s:[]};
+const cart={};
+const $=id=>document.getElementById(id);
+const save=()=>{try{localStorage.setItem('dm',JSON.stringify(S))}catch(e){}};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=n=>Number(n).toLocaleString('en-US')+' دج';
+const find=id=>S.p.find(p=>p.id===id);
+
+function tab(n,btn){
+  document.querySelectorAll('section').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('nav button').forEach(b=>b.classList.remove('on'));
+  $('t-'+n).classList.add('on');btn.classList.add('on');renderAll();
+}
+
+function renderSell(){
+  const q=$('q').value.trim();
+  const list=S.p.filter(p=>p.qty>0&&p.name.includes(q));
+  $('plist').innerHTML=list.length?list.map(p=>
+    `<div class="row" onclick="add(${p.id})"><div class="n">${esc(p.name)}<small>${fmt(p.price)}</small></div><small class="${p.qty<=p.min?'low':''}">المتبقي: ${p.qty}</small></div>`
+  ).join(''):`<div class="empty">${S.p.length?'لا توجد نتيجة.':'أضف منتجاتك أولاً من تبويب المنتجات.'}</div>`;
+  const ids=Object.keys(cart).map(Number);
+  $('cart').innerHTML=ids.length?ids.map(id=>{const p=find(id);return `<div class="row"><div class="n">${esc(p.name)}<small>${fmt(p.price*cart[id])}</small></div><div class="q"><button onclick="chg(${id},-1)">−</button><b>${cart[id]}</b><button onclick="chg(${id},1)">+</button></div></div>`}).join(''):'<div class="empty">اضغط على منتج لإضافته.</div>';
+  $('total').textContent=fmt(ids.reduce((s,id)=>s+find(id).price*cart[id],0));
+}
+function add(id){const p=find(id);if((cart[id]||0)<p.qty){cart[id]=(cart[id]||0)+1;$('msg').textContent='';}else $('msg').textContent='لا توجد كمية أكثر في المخزون.';renderSell();}
+function chg(id,d){const p=find(id);const n=(cart[id]||0)+d;if(n<=0)delete cart[id];else if(n<=p.qty)cart[id]=n;renderSell();}
+
+function checkout(debt){
+  const ids=Object.keys(cart).map(Number);
+  if(!ids.length){$('msg').textContent='الفاتورة فارغة.';return;}
+  const name=$('who').value.trim();
+  if(debt&&!name){$('msg').textContent='اكتب اسم الزبون للبيع بالدين.';return;}
+  let total=0,profit=0,lines=[];
+  ids.forEach(id=>{const p=find(id),n=cart[id];p.qty-=n;total+=p.price*n;profit+=(p.price-(p.c||0))*n;lines.push(p.name+' × '+n+' = '+fmt(p.price*n));delete cart[id];});
+  S.s.push({t:new Date().toDateString(),ts:Date.now(),v:total,g:profit});
+  if(debt){const d=S.d.find(x=>x.n===name);if(d)d.v+=total;else S.d.push({n:name,v:total});}
+  save();$('who').value='';
+  $('msg').textContent='';
+  RC=['وصل بيع','التاريخ: '+new Date().toLocaleString('ar-DZ'),'----------'].concat(lines,['المجموع: '+fmt(total)],debt?['بالدين على: '+name]:[]).join('\n');
+  $('rc').textContent=RC;$('rcbox').hidden=false;
+  renderAll();
+}
+
+function addProd(){
+  const name=$('pn').value.trim(),price=parseFloat($('pp').value),qty=parseInt($('pq').value)||0,min=parseInt($('pm').value)||0,c=parseFloat($('pc').value)||0,bc=$('pb').value.trim();
+  if(!name||!(price>=0)){note('اكتب اسم المنتج وسعره.');return;}
+  S.p.push({id:Date.now(),name,price,qty,min,c,bc});
+  ['pn','pp','pq','pm','pc','pb'].forEach(i=>$(i).value='');
+  note('تم حفظ المنتج');
+  save();renderAll();
+}
+function setQty(id,v){find(id).qty=Math.max(0,parseInt(v)||0);save();renderAll();}
+function delProd(id){if(dp!==id){dp=id;note('اضغط «حذف» مرة أخرى للتأكيد');return;}dp=0;S.p=S.p.filter(p=>p.id!==id);delete cart[id];save();renderAll();}
+function renderStock(){
+  $('stock').innerHTML=S.p.length?S.p.map(p=>
+    `<div class="row"><div class="n">${esc(p.name)}<small>${fmt(p.price)}${p.qty<=p.min?' <span class="low">· المخزون قليل</span>':''}</small></div><input class="pay" type="number" inputmode="numeric" value="${p.qty}" onchange="setQty(${p.id},this.value)"><button class="b r" onclick="delProd(${p.id})">حذف</button></div>`
+  ).join(''):'<div class="empty">لا توجد منتجات بعد.</div>';
+}
+
+function pay(i){
+  const v=parseFloat($('pay'+i).value);
+  if(!(v>0))return;
+  S.d[i].v=Math.max(0,S.d[i].v-v);
+  if(S.d[i].v===0)S.d.splice(i,1);
+  save();renderAll();
+}
+function renderDebts(){
+  const sum=S.d.reduce((s,d)=>s+d.v,0);
+  $('debts').innerHTML=S.d.length?`<div class="tot" style="border-top:0;margin:0"><span>الإجمالي عند الزبائن</span><span>${fmt(sum)}</span></div>`+S.d.map((d,i)=>
+    `<div class="row"><div class="n">${esc(d.n)}<small>${fmt(d.v)}</small></div><input class="pay" id="pay${i}" type="number" inputmode="decimal" placeholder="المبلغ"><button class="b g" onclick="pay(${i})">تسديد</button></div>`
+  ).join(''):'<div class="empty">لا توجد ديون. تُسجَّل هنا عند اختيار «بيع بالدين».</div>';
+}
+
+function renderAll(){
+  const today=new Date().toDateString();
+  $('today').textContent=fmt(S.s.filter(s=>s.t===today).reduce((a,s)=>a+s.v,0));
+  renderSell();renderStock();renderDebts();renderRep();
+}
+let RC='',dp=0,stream=null,tgt='sell';
+function note(t){const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(note.t);note.t=setTimeout(()=>e.classList.remove('on'),2500);}
+function fb(t){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();let ok=false;try{ok=document.execCommand('copy')}catch(e){}a.remove();note(ok?'تم النسخ':'تعذّر النسخ، انسخ النص يدوياً');}
+function copy(t){try{navigator.clipboard.writeText(t).then(()=>note('تم النسخ'),()=>fb(t));}catch(e){fb(t);}}
+async function shareRc(){try{if(navigator.share){await navigator.share({text:RC});return;}}catch(e){if(e.name==='AbortError')return;}copy(RC);}
+function byCode(c){c=c.trim();const p=S.p.find(x=>x.bc&&x.bc===c);if(p){add(p.id);$('q').value='';renderSell();}else note('لا يوجد منتج بهذا الباركود');}
+async function scan(t){
+  tgt=t||'sell';
+  if(!('BarcodeDetector' in window)||!navigator.mediaDevices){note('المسح بالكاميرا غير مدعوم هنا. اكتب الباركود أو استعمل قارئ باركود.');return;}
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    const v=$('cam');v.srcObject=stream;await v.play();$('camw').classList.add('on');
+    const det=new BarcodeDetector();
+    const loop=async()=>{if(!stream)return;try{const r=await det.detect(v);if(r.length){const c=r[0].rawValue;stopCam();if(tgt==='pb')$('pb').value=c;else byCode(c);return;}}catch(e){}setTimeout(loop,300);};
+    loop();
+  }catch(e){stopCam();note('تعذّر فتح الكاميرا. تأكد من السماح بها.');}
+}
+function stopCam(){if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;$('camw').classList.remove('on');}
+function renderRep(){
+  const now=Date.now(),day=864e5,td=new Date().toDateString();
+  const rows=[['اليوم',1],['آخر 7 أيام',7],['آخر 30 يوماً',30]].map(([l,n])=>{
+    const f=S.s.filter(s=>n===1?s.t===td:now-(s.ts||Date.parse(s.t))<n*day);
+    const v=f.reduce((a,s)=>a+s.v,0),g=f.reduce((a,s)=>a+(s.g||0),0);
+    return `<div class="row"><div class="n">${l}<small>${f.length} عملية بيع</small></div><div><b>${fmt(v)}</b><small>الربح: ${fmt(g)}</small></div></div>`;
+  }).join('');
+  const val=S.p.reduce((a,p)=>a+p.qty*(p.c||0),0),low=S.p.filter(p=>p.qty<=p.min);
+  $('reps').innerHTML=rows+`<div class="row"><div class="n">قيمة المخزون (بسعر الشراء)</div><b>${fmt(val)}</b></div>`+(low.length?`<div class="row"><div class="n low">ينقص: ${low.map(p=>esc(p.name)).join('، ')}</div></div>`:'')+'<small style="color:var(--mut)">الربح يُحسب للمنتجات التي أدخلت لها سعر الشراء.</small>';
+}
+function exp(){const t=JSON.stringify(S);$('bk').value=t;copy(t);}
+function imp(){try{const d=JSON.parse($('bk').value);if(!d||!Array.isArray(d.p)||!Array.isArray(d.d)||!Array.isArray(d.s))throw 0;S=d;save();renderAll();$('bkm').textContent='تم استيراد البيانات.';}catch(e){$('bkm').textContent='النص غير صالح. الصق النسخة كاملة.';}}
+renderAll();
+let ip;
+addEventListener('beforeinstallprompt',e=>{e.preventDefault();ip=e;$('inst').hidden=false;});
+$('inst').onclick=async()=>{ip.prompt();await ip.userChoice;$('inst').hidden=true;};
+if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+</script>
+</body>
+</html>
